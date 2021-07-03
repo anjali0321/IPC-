@@ -1,0 +1,28 @@
+exception select.error
+A deprecated alias of OSError.
+
+select.devpoll()¶
+
+select.epoll(sizehint=-1, flags=0)¶
+
+select.poll()
+
+select.kevent(ident, filter=KQ_FILTER_READ, flags=KQ_EV_ADD, fflags=0, data=0, udata=0)
+
+select.select(rlist, wlist, xlist[, timeout])
+
+select.PIPE_BUF
+
+#PollingObjects
+
+devpoll.close()
+
+devpoll.closed
+
+devpoll.fileno()
+
+devpoll.register(fd[, eventmask])
+
+devpoll.modify(fd[, eventmask])
+
+devpoll.unregister(fd)
