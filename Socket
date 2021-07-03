@@ -1,0 +1,188 @@
+import socket
+
+addr = ("", 8080)  # all interfaces, port 8080
+if socket.has_dualstack_ipv6():
+    s = socket.create_server(addr, family=socket.AF_INET6, dualstack_ipv6=True)
+else:
+    s = socket.create_server(addr)
+    
+    >>> socket.getaddrinfo("example.org", 80, proto=socket.IPPROTO_TCP)
+[(<AddressFamily.AF_INET6: 10>, <SocketType.SOCK_STREAM: 1>,
+ 6, '', ('2606:2800:220:1:248:1893:25c8:1946', 80, 0, 0)),
+ (<AddressFamily.AF_INET: 2>, <SocketType.SOCK_STREAM: 1>,
+ 6, '', ('93.184.216.34', 80))]
+ 
+ import socket, array
+
+def recv_fds(sock, msglen, maxfds):
+    fds = array.array("i")   # Array of ints
+    msg, ancdata, flags, addr = sock.recvmsg(msglen, socket.CMSG_LEN(maxfds * fds.itemsize))
+    for cmsg_level, cmsg_type, cmsg_data in ancdata:
+        if cmsg_level == socket.SOL_SOCKET and cmsg_type == socket.SCM_RIGHTS:
+            # Append data, ignoring any truncated integers at the end.
+            fds.frombytes(cmsg_data[:len(cmsg_data) - (len(cmsg_data) % fds.itemsize)])
+    return msg, list(fds)
+    
+    >>> import socket
+>>> s1, s2 = socket.socketpair()
+>>> b1 = bytearray(b'----')
+>>> b2 = bytearray(b'0123456789')
+>>> b3 = bytearray(b'--------------')
+>>> s1.send(b'Mary had a little lamb')
+22
+>>> s2.recvmsg_into([b1, memoryview(b2)[2:9], b3])
+(22, [], 0, None)
+>>> [b1, b2, b3]
+[bytearray(b'Mary'), bytearray(b'01 had a 9'), bytearray(b'little lamb---')]
+
+import socket, array
+
+def send_fds(sock, msg, fds):
+    return sock.sendmsg([msg], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array("i", fds))])
+    
+    import socket
+
+HOST = ''                 # Symbolic name meaning all available interfaces
+PORT = 50007              # Arbitrary non-privileged port
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.bind((HOST, PORT))
+    s.listen(1)
+    conn, addr = s.accept()
+    with conn:
+        print('Connected by', addr)
+        while True:
+            data = conn.recv(1024)
+            if not data: break
+            conn.sendall(data)
+# Echo client program
+import socket
+
+HOST = 'daring.cwi.nl'    # The remote host
+PORT = 50007              # The same port as used by the server
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect((HOST, PORT))
+    s.sendall(b'Hello, world')
+    data = s.recv(1024)
+print('Received', repr(data))
+
+# Echo server program
+import socket
+import sys
+
+HOST = None               # Symbolic name meaning all available interfaces
+PORT = 50007              # Arbitrary non-privileged port
+s = None
+for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC,
+                              socket.SOCK_STREAM, 0, socket.AI_PASSIVE):
+    af, socktype, proto, canonname, sa = res
+    try:
+        s = socket.socket(af, socktype, proto)
+    except OSError as msg:
+        s = None
+        continue
+    try:
+        s.bind(sa)
+        s.listen(1)
+    except OSError as msg:
+        s.close()
+        s = None
+        continue
+    break
+if s is None:
+    print('could not open socket')
+    sys.exit(1)
+conn, addr = s.accept()
+with conn:
+    print('Connected by', addr)
+    while True:
+        data = conn.recv(1024)
+        if not data: break
+        conn.send(data)
+# Echo client program
+import socket
+import sys
+
+HOST = 'daring.cwi.nl'    # The remote host
+PORT = 50007              # The same port as used by the server
+s = None
+for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC, socket.SOCK_STREAM):
+    af, socktype, proto, canonname, sa = res
+    try:
+        s = socket.socket(af, socktype, proto)
+    except OSError as msg:
+        s = None
+        continue
+    try:
+        s.connect(sa)
+    except OSError as msg:
+        s.close()
+        s = None
+        continue
+    break
+if s is None:
+    print('could not open socket')
+    sys.exit(1)
+with s:
+    s.sendall(b'Hello, world')
+    data = s.recv(1024)
+print('Received', repr(data))
+The next example shows how to write a very simple network sniffer with raw sockets on Windows. The example requires administrator privileges to modify the interface:
+
+import socket
+
+# the public network interface
+HOST = socket.gethostbyname(socket.gethostname())
+
+# create a raw socket and bind it to the public interface
+s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+s.bind((HOST, 0))
+
+# Include IP headers
+s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+
+# receive all packages
+s.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+
+# receive a package
+print(s.recvfrom(65565))
+
+# disabled promiscuous mode
+s.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)
+
+import socket
+import struct
+
+
+# CAN frame packing/unpacking (see 'struct can_frame' in <linux/can.h>)
+
+can_frame_fmt = "=IB3x8s"
+can_frame_size = struct.calcsize(can_frame_fmt)
+
+def build_can_frame(can_id, data):
+    can_dlc = len(data)
+    data = data.ljust(8, b'\x00')
+    return struct.pack(can_frame_fmt, can_id, can_dlc, data)
+
+def dissect_can_frame(frame):
+    can_id, can_dlc, data = struct.unpack(can_frame_fmt, frame)
+    return (can_id, can_dlc, data[:can_dlc])
+
+
+# create a raw socket and bind it to the 'vcan0' interface
+s = socket.socket(socket.AF_CAN, socket.SOCK_RAW, socket.CAN_RAW)
+s.bind(('vcan0',))
+
+while True:
+    cf, addr = s.recvfrom(can_frame_size)
+
+    print('Received: can_id=%x, can_dlc=%x, data=%s' % dissect_can_frame(cf))
+
+    try:
+        s.send(cf)
+    except OSError:
+        print('Error sending CAN frame')
+
+    try:
+        s.send(build_can_frame(0x01, b'\x01\x02\x03'))
+    except OSError:
+        print('Error sending CAN frame')
