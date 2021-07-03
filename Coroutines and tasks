@@ -1,0 +1,191 @@
+async def main():
+    task1 = asyncio.create_task(
+        say_after(1, 'hello'))
+
+    task2 = asyncio.create_task(
+        say_after(2, 'world'))
+
+    print(f"started at {time.strftime('%X')}")
+
+    # Wait until both tasks are completed (should take
+    # around 2 seconds.)
+    await task1
+    await task2
+
+    print(f"finished at {time.strftime('%X')}")
+    
+    #Awaitable
+    
+    import asyncio
+
+async def nested():
+    return 42
+
+async def main():
+    # Nothing happens if we just call "nested()".
+    # A coroutine object is created but not awaited,
+    # so it *won't run at all*.
+    nested()
+
+    # Let's do it differently now and await it:
+    print(await nested())  # will print "42".
+    
+    #Task
+    
+    import asyncio
+
+async def nested():
+    return 42
+
+async def main():
+    # Schedule nested() to run soon concurrently
+    # with "main()".
+    task = asyncio.create_task(nested())
+
+    # "task" can now be used to cancel "nested()", or
+    # can simply be awaited to wait until it is complete:
+    await task
+
+asyncio.run(main())
+
+#RunningAnAsyncioProgram
+
+async def main():
+    await asyncio.sleep(1)
+    print('hello')
+
+asyncio.run(main())
+
+#CreatingTasks
+
+async def coro():
+    ...
+
+# In Python 3.7+
+task = asyncio.create_task(coro())
+...
+
+# This works in all Python versions but is less readable
+task = asyncio.ensure_future(coro())
+...
+
+#Sleeping
+
+import asyncio
+import datetime
+
+async def display_date():
+    loop = asyncio.get_running_loop()
+    end_time = loop.time() + 5.0
+    while True:
+        print(datetime.datetime.now())
+        if (loop.time() + 1.0) >= end_time:
+            break
+        await asyncio.sleep(1)
+
+asyncio.run(display_date())
+
+#RunningTaskConcurrently
+
+import asyncio
+
+async def factorial(name, number):
+    f = 1
+    for i in range(2, number + 1):
+        print(f"Task {name}: Compute factorial({number}), currently i={i}...")
+        await asyncio.sleep(1)
+        f *= i
+    print(f"Task {name}: factorial({number}) = {f}")
+    return f
+
+async def main():
+    # Schedule three calls *concurrently*:
+    L = await asyncio.gather(
+        factorial("A", 2),
+        factorial("B", 3),
+        factorial("C", 4),
+    )
+    print(L)
+
+asyncio.run(main())
+
+# Expected output:
+#
+#     Task A: Compute factorial(2), currently i=2...
+#     Task B: Compute factorial(3), currently i=2...
+#     Task C: Compute factorial(4), currently i=2...
+#     Task A: factorial(2) = 2
+#     Task B: Compute factorial(3), currently i=3...
+#     Task C: Compute factorial(4), currently i=3...
+#     Task B: factorial(3) = 6
+#     Task C: Compute factorial(4), currently i=4...
+#     Task C: factorial(4) = 24
+#     [2, 6, 24]
+
+#Timeouts
+
+async def eternity():
+    # Sleep for one hour
+    await asyncio.sleep(3600)
+    print('yay!')
+
+async def main():
+    # Wait for at most 1 second
+    try:
+        await asyncio.wait_for(eternity(), timeout=1.0)
+    except asyncio.TimeoutError:
+        print('timeout!')
+
+asyncio.run(main())
+
+
+#RunningThreads
+
+def blocking_io():
+    print(f"start blocking_io at {time.strftime('%X')}")
+    # Note that time.sleep() can be replaced with any blocking
+    # IO-bound operation, such as file operations.
+    time.sleep(1)
+    print(f"blocking_io complete at {time.strftime('%X')}")
+
+async def main():
+    print(f"started main at {time.strftime('%X')}")
+
+    await asyncio.gather(
+        asyncio.to_thread(blocking_io),
+        asyncio.sleep(1))
+
+    print(f"finished main at {time.strftime('%X')}")
+
+
+asyncio.run(main())
+
+#TaskObjects
+
+async def cancel_me():
+    print('cancel_me(): before sleep')
+
+    try:
+        # Wait for 1 hour
+        await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        print('cancel_me(): cancel sleep')
+        raise
+    finally:
+        print('cancel_me(): after sleep')
+
+async def main():
+    # Create a "cancel_me" Task
+    task = asyncio.create_task(cancel_me())
+
+    # Wait for 1 second
+    await asyncio.sleep(1)
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        print("main(): cancel_me is cancelled now")
+
+asyncio.run(main())
+
